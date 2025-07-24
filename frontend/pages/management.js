@@ -130,7 +130,7 @@ export default function Management() {
 
   const renderItem = (item, type) => {
     const isEditing = editingItem && editingItem.id === item.id && editingItem.type === type;
-    const isAdding = showAddForm === type;
+    const isAdding = showAddForm === type && !item.id; // Only show form for empty item when adding
 
     if (isEditing || isAdding) {
       return (
