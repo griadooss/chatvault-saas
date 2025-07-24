@@ -105,6 +105,9 @@ export default function Dashboard() {
                   <a href="/search" className="text-gray-700 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium">
                     Search
                   </a>
+                  <a href="/management" className="text-gray-700 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium">
+                    Settings
+                  </a>
                 </nav>
                 <span className="text-sm text-gray-700">Welcome, {user?.name || user?.email}</span>
                 <button

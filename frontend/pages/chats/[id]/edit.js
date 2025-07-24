@@ -132,6 +132,7 @@ export default function EditChat() {
         }, 1500);
       } else {
         setError(data.error || 'Update failed');
+        console.error('Update failed:', data);
       }
     } catch (error) {
       setError('Connection error');

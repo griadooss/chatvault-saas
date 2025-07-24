@@ -293,21 +293,56 @@ router.post('/upload', upload.single('file'), requireUser, asyncHandler(async (r
 router.put('/:id', [
   body('title').optional().notEmpty().withMessage('Title cannot be empty'),
   body('chatDate').optional().isISO8601().withMessage('Chat date must be valid ISO date'),
-  body('sourceId').optional().isString().withMessage('Source ID must be a string'),
-  body('categoryId').optional().isString().withMessage('Category ID must be a string'),
-  body('subcategoryId').optional().isString().withMessage('Subcategory ID must be a string'),
-  body('projectId').optional().isString().withMessage('Project ID must be a string'),
-  body('phaseId').optional().isString().withMessage('Phase ID must be a string'),
+  body('sourceId').optional().custom((value) => {
+    if (value !== undefined && value !== null && value !== '' && typeof value !== 'string') {
+      throw new Error('Source ID must be a string');
+    }
+    return true;
+  }),
+  body('categoryId').optional().custom((value) => {
+    if (value !== undefined && value !== null && value !== '' && typeof value !== 'string') {
+      throw new Error('Category ID must be a string');
+    }
+    return true;
+  }),
+  body('subcategoryId').optional().custom((value) => {
+    if (value !== undefined && value !== null && value !== '' && typeof value !== 'string') {
+      throw new Error('Subcategory ID must be a string');
+    }
+    return true;
+  }),
+  body('projectId').optional().custom((value) => {
+    if (value !== undefined && value !== null && value !== '' && typeof value !== 'string') {
+      throw new Error('Project ID must be a string');
+    }
+    return true;
+  }),
+  body('phaseId').optional().custom((value) => {
+    if (value !== undefined && value !== null && value !== '' && typeof value !== 'string') {
+      throw new Error('Phase ID must be a string');
+    }
+    return true;
+  }),
   body('description').optional().isString().withMessage('Description must be a string'),
   body('notes').optional().isString().withMessage('Notes must be a string'),
 ], requireUser, asyncHandler(async (req: AuthenticatedRequest, res) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
-    throw createError('Validation failed', 400);
+    console.log('Validation errors:', errors.array());
+    throw createError(`Validation failed: ${errors.array().map(e => e.msg).join(', ')}`, 400);
   }
 
   const { id } = req.params;
   const updateData = req.body;
+
+  // Clean up empty strings to null for optional fields
+  if (updateData.sourceId === '') updateData.sourceId = null;
+  if (updateData.categoryId === '') updateData.categoryId = null;
+  if (updateData.subcategoryId === '') updateData.subcategoryId = null;
+  if (updateData.projectId === '') updateData.projectId = null;
+  if (updateData.phaseId === '') updateData.phaseId = null;
+  if (updateData.description === '') updateData.description = null;
+  if (updateData.notes === '') updateData.notes = null;
 
   // Check if chat exists and belongs to user
   const existingChat = await prisma.chat.findFirst({
