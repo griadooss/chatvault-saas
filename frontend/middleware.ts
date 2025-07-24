@@ -1,4 +1,4 @@
-// Temporarily disabled for testing
+// Temporarily disabled for testing - will re-enable after deployment
 // import { clerkMiddleware } from "@clerk/nextjs";
 
 // This example protects all routes including api/trpc routes
