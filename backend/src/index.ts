@@ -5,7 +5,6 @@ import dotenv from 'dotenv';
 import rateLimit from 'express-rate-limit';
 
 // Import routes
-import authRoutes from './routes/auth';
 import chatRoutes from './routes/chats';
 import managementRoutes from './routes/management';
 import subscriptionRoutes from './routes/subscriptions';
@@ -45,14 +44,6 @@ const limiter = rateLimit({
 });
 app.use(limiter);
 
-// Stricter rate limiting for login attempts
-const loginLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 5, // Limit each IP to 5 login attempts per windowMs
-  message: 'Too many login attempts from this IP, please try again later.',
-  skipSuccessfulRequests: true,
-});
-
 // CORS configuration
 const corsOrigins = [
   'http://localhost:8080',
@@ -84,9 +75,6 @@ app.get('/health', (req, res) => {
     version: '1.0.0'
   });
 });
-
-// Authentication routes (with stricter rate limiting)
-app.use('/api/auth', loginLimiter, authRoutes);
 
 // Protected routes (require authentication)
 app.use('/api/chats', authenticateToken, chatRoutes);

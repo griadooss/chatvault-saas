@@ -41,8 +41,8 @@ export const authenticateToken = async (
     }
 
     // Get or create user in our database
-    const clerkUserId = payload.sub;
-    const email = payload.email || payload.email_addresses?.[0]?.email_address;
+    const clerkUserId = payload.sub as string;
+    const email = (payload.email as string) || (payload.email_addresses as any)?.[0]?.email_address;
     
     if (!email) {
       return res.status(401).json({ error: 'Email not found in token' });
@@ -66,8 +66,8 @@ export const authenticateToken = async (
         data: {
           id: clerkUserId,
           email: email,
-          firstName: payload.first_name || null,
-          lastName: payload.last_name || null,
+          firstName: (payload.first_name as string) || null,
+          lastName: (payload.last_name as string) || null,
           role: 'USER',
           isActive: true,
         },
@@ -86,7 +86,15 @@ export const authenticateToken = async (
       return res.status(401).json({ error: 'User account is inactive' });
     }
 
-    req.user = user;
+    // Convert null values to undefined for the interface
+    req.user = {
+      id: user.id,
+      email: user.email,
+      role: user.role,
+      firstName: user.firstName || undefined,
+      lastName: user.lastName || undefined,
+    };
+    
     next();
   } catch (error) {
     console.error('Authentication error:', error);
