@@ -41,7 +41,7 @@ router.post('/sources', [
     data: {
       name,
       description: description || null,
-      userId: 'test-user', // Temporary for testing
+      userId: 'user_test_admin', // Use existing test user
     },
   });
 
@@ -136,7 +136,7 @@ router.post('/categories', [
     data: {
       name,
       description: description || null,
-      userId: 'test-user', // Temporary for testing
+      userId: 'user_test_admin', // Use existing test user
     },
   });
 
@@ -253,7 +253,7 @@ router.post('/subcategories', [
       name,
       description: description || null,
       categoryId,
-      userId: 'test-user', // Temporary for testing
+      userId: 'user_test_admin', // Use existing test user
     },
     include: {
       category: { select: { id: true, name: true } }
@@ -354,7 +354,7 @@ router.post('/projects', [
     data: {
       name,
       description: description || null,
-      userId: 'test-user', // Temporary for testing
+      userId: 'user_test_admin', // Use existing test user
     },
   });
 
@@ -471,7 +471,7 @@ router.post('/phases', [
       name,
       description: description || null,
       projectId,
-      userId: 'test-user', // Temporary for testing
+      userId: 'user_test_admin', // Use existing test user
     },
     include: {
       project: { select: { id: true, name: true } }
@@ -572,7 +572,7 @@ router.post('/formats', [
     data: {
       name,
       description: description || null,
-      userId: 'test-user', // Temporary for testing
+      userId: 'user_test_admin', // Use existing test user
     },
   });
 
