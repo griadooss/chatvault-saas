@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/router';
 import Head from 'next/head';
 
 export default function Upload() {
@@ -15,7 +14,6 @@ export default function Upload() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
-  const router = useRouter();
 
   // Lookup data
   const [sources, setSources] = useState([]);
@@ -30,18 +28,12 @@ export default function Upload() {
 
   const fetchLookupData = async () => {
     try {
-      const token = localStorage.getItem('token');
-      const headers = {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      };
-
       const [sourcesRes, categoriesRes, subcategoriesRes, projectsRes, phasesRes] = await Promise.all([
-        fetch('http://localhost:3001/api/management/sources', { headers }),
-        fetch('http://localhost:3001/api/management/categories', { headers }),
-        fetch('http://localhost:3001/api/management/subcategories', { headers }),
-        fetch('http://localhost:3001/api/management/projects', { headers }),
-        fetch('http://localhost:3001/api/management/phases', { headers }),
+        fetch('http://localhost:3001/api/management/sources'),
+        fetch('http://localhost:3001/api/management/categories'),
+        fetch('http://localhost:3001/api/management/subcategories'),
+        fetch('http://localhost:3001/api/management/projects'),
+        fetch('http://localhost:3001/api/management/phases'),
       ]);
 
       if (sourcesRes.ok) setSources(await sourcesRes.json());
@@ -85,7 +77,6 @@ export default function Upload() {
     setSuccess('');
 
     try {
-      const token = localStorage.getItem('token');
       const formData = new FormData();
       formData.append('file', file);
       formData.append('title', title);
@@ -99,9 +90,6 @@ export default function Upload() {
 
       const response = await fetch('http://localhost:3001/api/chats/upload', {
         method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
         body: formData,
       });
 
@@ -170,16 +158,6 @@ export default function Upload() {
                     Settings
                   </a>
                 </nav>
-                <button
-                  onClick={() => {
-                    localStorage.removeItem('token');
-                    localStorage.removeItem('user');
-                    router.push('/');
-                  }}
-                  className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md text-sm font-medium"
-                >
-                  Logout
-                </button>
               </div>
             </div>
           </div>
