@@ -128,6 +128,13 @@ export default function Management() {
     setFormData({ name: '', description: '' });
   };
 
+  const handleShowAddForm = (type) => {
+    // Clear form data when switching between different sections
+    setFormData({ name: '', description: '' });
+    setEditingItem(null);
+    setShowAddForm(type);
+  };
+
   const renderItem = (item, type) => {
     const isEditing = editingItem && editingItem.id === item.id && editingItem.type === type;
     const isAdding = showAddForm === type && !item.id; // Only show form for empty item when adding
@@ -215,7 +222,7 @@ export default function Management() {
         <div className="flex justify-between items-center mb-4">
           <h3 className="text-lg font-medium text-gray-900">{title}</h3>
           <button
-            onClick={() => setShowAddForm(type)}
+            onClick={() => handleShowAddForm(type)}
             className="px-3 py-1 bg-green-600 text-white rounded text-sm hover:bg-green-700"
           >
             {getButtonText(title)}
