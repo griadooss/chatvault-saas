@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import jwt from 'jsonwebtoken';
+import { verifyToken } from '@clerk/backend';
 import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
@@ -9,8 +9,8 @@ export interface AuthenticatedRequest extends Request {
     id: string;
     email: string;
     role: string;
-    firstName: string;
-    lastName: string;
+    firstName?: string;
+    lastName?: string;
   };
 }
 
@@ -27,15 +27,29 @@ export const authenticateToken = async (
       return res.status(401).json({ error: 'Access token required' });
     }
 
-    if (!process.env.JWT_SECRET) {
-      return res.status(500).json({ error: 'JWT secret not configured' });
+    if (!process.env.CLERK_SECRET_KEY) {
+      return res.status(500).json({ error: 'Clerk secret key not configured' });
     }
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET) as any;
+    // Verify the Clerk token
+    const payload = await verifyToken(token, {
+      jwtKey: process.env.CLERK_SECRET_KEY,
+    });
+
+    if (!payload) {
+      return res.status(401).json({ error: 'Invalid token' });
+    }
+
+    // Get or create user in our database
+    const clerkUserId = payload.sub;
+    const email = payload.email || payload.email_addresses?.[0]?.email_address;
     
-    // Fetch fresh user data from database
-    const user = await prisma.user.findUnique({
-      where: { id: decoded.userId },
+    if (!email) {
+      return res.status(401).json({ error: 'Email not found in token' });
+    }
+
+    let user = await prisma.user.findUnique({
+      where: { id: clerkUserId },
       select: {
         id: true,
         email: true,
@@ -46,8 +60,30 @@ export const authenticateToken = async (
       },
     });
 
-    if (!user || !user.isActive) {
-      return res.status(401).json({ error: 'Invalid or inactive user' });
+    // Create user if they don't exist
+    if (!user) {
+      user = await prisma.user.create({
+        data: {
+          id: clerkUserId,
+          email: email,
+          firstName: payload.first_name || null,
+          lastName: payload.last_name || null,
+          role: 'USER',
+          isActive: true,
+        },
+        select: {
+          id: true,
+          email: true,
+          firstName: true,
+          lastName: true,
+          role: true,
+          isActive: true,
+        },
+      });
+    }
+
+    if (!user.isActive) {
+      return res.status(401).json({ error: 'User account is inactive' });
     }
 
     req.user = user;
@@ -77,5 +113,4 @@ export const requireRole = (roles: string[]) => {
 };
 
 export const requireAdmin = requireRole(["ADMIN"]);
-export const requireTreasurer = requireRole(["ADMIN", "TREASURER"]);
-export const requireUser = requireRole(["ADMIN", "TREASURER", "USER"]); 
+export const requireUser = requireRole(["ADMIN", "USER"]); 

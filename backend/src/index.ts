@@ -8,6 +8,7 @@ import rateLimit from 'express-rate-limit';
 import authRoutes from './routes/auth';
 import chatRoutes from './routes/chats';
 import managementRoutes from './routes/management';
+import subscriptionRoutes from './routes/subscriptions';
 
 // Import middleware
 import { errorHandler } from './middleware/errorHandler';
@@ -90,6 +91,10 @@ app.use('/api/auth', loginLimiter, authRoutes);
 // Protected routes (require authentication)
 app.use('/api/chats', authenticateToken, chatRoutes);
 app.use('/api/management', authenticateToken, managementRoutes);
+app.use('/api/subscriptions', authenticateToken, subscriptionRoutes);
+
+// Stripe webhook (no authentication required)
+app.use('/api/subscriptions/webhook', subscriptionRoutes);
 
 // Error handling middleware (must be last)
 app.use(errorHandler);
@@ -98,7 +103,8 @@ app.use(errorHandler);
 app.use('*', (req, res) => {
   res.status(404).json({ 
     error: 'Not Found',
-    message: `Route ${req.originalUrl} not found` 
+    message: 'The requested resource was not found',
+    path: req.originalUrl
   });
 });
 

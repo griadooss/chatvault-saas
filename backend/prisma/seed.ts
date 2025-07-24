@@ -1,20 +1,17 @@
 import { PrismaClient } from '@prisma/client';
-import bcrypt from 'bcryptjs';
 
 const prisma = new PrismaClient();
 
 async function main() {
   console.log('🌱 Starting ChatVault database seed...');
 
-  // Create a test user
-  const hashedPassword = await bcrypt.hash('password123', 10);
-  
+  // Create a test user (Clerk user ID)
   const user = await prisma.user.upsert({
     where: { email: 'admin@chatvault.com' },
     update: {},
     create: {
+      id: 'user_test_admin', // Clerk user ID
       email: 'admin@chatvault.com',
-      password: hashedPassword,
       firstName: 'Admin',
       lastName: 'User',
       role: 'ADMIN',
@@ -261,7 +258,7 @@ async function main() {
   console.log('✅ Created sample chat:', sampleChat.title);
 
   console.log('🎉 ChatVault database seeded successfully!');
-  console.log('📧 Login with: admin@chatvault.com / password123');
+  console.log('📧 Test user created with Clerk ID: user_test_admin');
 }
 
 main()
