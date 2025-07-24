@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import Head from 'next/head';
 
 export default function Dashboard() {
-  const [chatSummary, setChatSummary] = useState(null);
+  const [chatData, setChatData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -20,7 +20,7 @@ export default function Dashboard() {
       const data = await response.json();
       
       if (response.ok) {
-        setChatSummary(data);
+        setChatData(data);
       } else {
         setError('Failed to load chat summary');
       }
@@ -30,6 +30,9 @@ export default function Dashboard() {
       setLoading(false);
     }
   };
+
+  // Extract chats array from the response
+  const chats = chatData?.chats || [];
 
   if (loading) {
     return (
@@ -120,7 +123,7 @@ export default function Dashboard() {
                     <dl>
                       <dt className="text-sm font-medium text-gray-500 truncate">Total Chats</dt>
                       <dd className="text-lg font-medium text-gray-900">
-                        {chatSummary?.length || 0}
+                        {chats.length}
                       </dd>
                     </dl>
                   </div>
@@ -142,11 +145,11 @@ export default function Dashboard() {
                     <dl>
                       <dt className="text-sm font-medium text-gray-500 truncate">This Month</dt>
                       <dd className="text-lg font-medium text-gray-900">
-                        {chatSummary?.filter(chat => {
+                        {chats.filter(chat => {
                           const chatDate = new Date(chat.chatDate);
                           const now = new Date();
                           return chatDate.getMonth() === now.getMonth() && chatDate.getFullYear() === now.getFullYear();
-                        }).length || 0}
+                        }).length}
                       </dd>
                     </dl>
                   </div>
@@ -168,7 +171,7 @@ export default function Dashboard() {
                     <dl>
                       <dt className="text-sm font-medium text-gray-500 truncate">Categories</dt>
                       <dd className="text-lg font-medium text-gray-900">
-                        {new Set(chatSummary?.map(chat => chat.category?.name).filter(Boolean)).size || 0}
+                        {new Set(chats.map(chat => chat.category?.name).filter(Boolean)).size}
                       </dd>
                     </dl>
                   </div>
@@ -190,7 +193,7 @@ export default function Dashboard() {
                     <dl>
                       <dt className="text-sm font-medium text-gray-500 truncate">Projects</dt>
                       <dd className="text-lg font-medium text-gray-900">
-                        {new Set(chatSummary?.map(chat => chat.project?.name).filter(Boolean)).size || 0}
+                        {new Set(chats.map(chat => chat.project?.name).filter(Boolean)).size}
                       </dd>
                     </dl>
                   </div>
