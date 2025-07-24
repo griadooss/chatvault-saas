@@ -383,10 +383,15 @@ router.delete('/:id', requireUser, asyncHandler(async (req: AuthenticatedRequest
 
 // Export selected chats as ZIP
 router.post('/export-selected', requireUser, asyncHandler(async (req: AuthenticatedRequest, res) => {
-  const { chatIds } = req.body;
+  const { chatIds, format = 'all' } = req.body;
 
   if (!chatIds || !Array.isArray(chatIds) || chatIds.length === 0) {
     throw createError('No chat IDs provided', 400);
+  }
+
+  // Validate format parameter
+  if (!['all', 'original', 'html'].includes(format)) {
+    throw createError('Invalid format specified', 400);
   }
 
   // Get selected chats for the user
@@ -432,29 +437,38 @@ router.post('/export-selected', requireUser, asyncHandler(async (req: Authentica
   archive.pipe(output);
 
   // Add each selected chat file to the ZIP
+  let filesAdded = 0;
   for (const chat of chats) {
     let filePath: string;
     let fileName: string;
 
-    // Try to add the original file
-    if (chat.originalFile) {
+    // Add original file based on format selection
+    if (chat.originalFile && (format === 'all' || format === 'original')) {
       filePath = path.join(__dirname, '../../uploads', chat.originalFile);
       if (fs.existsSync(filePath)) {
         fileName = `${chat.title}${path.extname(chat.originalFile)}`;
         archive.file(filePath, { name: fileName });
+        filesAdded++;
+        console.log(`Added original file: ${fileName}`);
+      } else {
+        console.log(`Original file not found: ${filePath}`);
       }
     }
 
-    // Try to add the HTML file if it exists
-    if (chat.htmlFile) {
+    // Add HTML file based on format selection
+    if (chat.htmlFile && (format === 'all' || format === 'html')) {
       filePath = path.join(__dirname, '../../uploads', chat.htmlFile);
       if (fs.existsSync(filePath)) {
         fileName = `${chat.title}.html`;
         archive.file(filePath, { name: fileName });
+        filesAdded++;
+        console.log(`Added HTML file: ${fileName}`);
+      } else {
+        console.log(`HTML file not found: ${filePath}`);
       }
     }
 
-    // Add metadata as JSON
+    // Add metadata as JSON (always add this)
     const metadata = {
       id: chat.id,
       title: chat.title,
@@ -469,7 +483,10 @@ router.post('/export-selected', requireUser, asyncHandler(async (req: Authentica
     };
 
     archive.append(JSON.stringify(metadata, null, 2), { name: `${chat.title}-metadata.json` });
+    console.log(`Added metadata for: ${chat.title}`);
   }
+
+  console.log(`Total files added to archive: ${filesAdded}`);
 
   archive.finalize();
 }));

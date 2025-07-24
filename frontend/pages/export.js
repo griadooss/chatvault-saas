@@ -5,6 +5,7 @@ import Head from 'next/head';
 export default function Export() {
   const [chats, setChats] = useState([]);
   const [selectedChats, setSelectedChats] = useState([]);
+  const [exportFormat, setExportFormat] = useState('all'); // 'all', 'original', 'html'
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -57,7 +58,10 @@ export default function Export() {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ chatIds: selectedChats }),
+        body: JSON.stringify({ 
+          chatIds: selectedChats,
+          format: exportFormat 
+        }),
       });
 
       if (response.ok) {
@@ -212,6 +216,29 @@ export default function Export() {
                   <p className="text-blue-700 text-sm mb-4">
                     Select the chats you want to export. Use "Select All" to export everything, or choose specific chats.
                   </p>
+                  
+                  {/* Export Format Selection */}
+                  <div className="mb-4">
+                    <label className="block text-sm font-medium text-blue-900 mb-2">
+                      Export Format:
+                    </label>
+                    <select
+                      value={exportFormat}
+                      onChange={(e) => setExportFormat(e.target.value)}
+                      className="w-full px-3 py-2 border border-blue-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm"
+                      disabled={exporting}
+                    >
+                      <option value="all">All formats (original + HTML)</option>
+                      <option value="original">Original format only</option>
+                      <option value="html">HTML format only</option>
+                    </select>
+                    <p className="text-xs text-blue-600 mt-1">
+                      {exportFormat === 'all' && "Exports both original files and HTML versions"}
+                      {exportFormat === 'original' && "Exports only the original file format (.md, .txt, etc.)"}
+                      {exportFormat === 'html' && "Exports only the HTML version (if available)"}
+                    </p>
+                  </div>
+
                   <div className="flex items-center space-x-4">
                     <button
                       onClick={handleExportSelected}
