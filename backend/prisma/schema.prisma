@@ -1,0 +1,185 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// User Management (keep existing structure)
+model User {
+  id          String   @id @default(cuid())
+  email       String   @unique
+  password    String
+  firstName   String
+  lastName    String
+  role        String   @default("USER") // ADMIN, USER, VIEWER
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Chat relations
+  chats       Chat[]
+  sources     Source[]
+  categories  Category[]
+  subcategories Subcategory[]
+  projects    Project[]
+  phases      Phase[]
+  formats     FileFormat[]
+
+  @@map("users")
+}
+
+// Chat Management (replacing Transaction model)
+model Chat {
+  id              String   @id @default(cuid())
+  userId          String
+  title           String
+  description     String?
+  content         String?  // File content or reference
+  originalFile    String?  // Path to original uploaded file
+  htmlFile        String?  // Path to converted HTML file
+  notes           String?
+  
+  // Metadata
+  chatDate        DateTime
+  sourceId        String?
+  categoryId      String?
+  subcategoryId   String?
+  projectId       String?
+  phaseId         String?
+  formatId        String?
+  
+  // Timestamps
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  // Relations
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  source          Source?  @relation(fields: [sourceId], references: [id])
+  category        Category? @relation(fields: [categoryId], references: [id])
+  subcategory     Subcategory? @relation(fields: [subcategoryId], references: [id])
+  project         Project? @relation(fields: [projectId], references: [id])
+  phase           Phase? @relation(fields: [phaseId], references: [id])
+  format          FileFormat? @relation(fields: [formatId], references: [id])
+
+  @@map("chats")
+}
+
+// Chat Sources (WhatsApp, Telegram, etc.)
+model Source {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  chats       Chat[]
+
+  @@unique([name, userId])
+  @@map("sources")
+}
+
+// Categories (replacing budget categories)
+model Category {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  chats       Chat[]
+  subcategories Subcategory[]
+
+  @@unique([name, userId])
+  @@map("categories")
+}
+
+// Subcategories
+model Subcategory {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  categoryId  String
+  category    Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  chats       Chat[]
+
+  @@unique([name, categoryId])
+  @@map("subcategories")
+}
+
+// Projects
+model Project {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  chats       Chat[]
+  phases      Phase[]
+
+  @@unique([name, userId])
+  @@map("projects")
+}
+
+// Project Phases
+model Phase {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  projectId   String
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  chats       Chat[]
+
+  @@unique([name, projectId])
+  @@map("phases")
+}
+
+// File Formats
+model FileFormat {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  chats       Chat[]
+
+  @@unique([name, userId])
+  @@map("file_formats")
+} 

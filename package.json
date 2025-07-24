@@ -1,0 +1,13 @@
+{
+  "name": "chatvault-app",
+  "version": "1.0.0",
+  "description": "ChatVault - Chat Management and Archival System",
+  "scripts": {
+    "build": "cd backend && npm install && npm run build",
+    "start": "cd backend && npm start",
+    "dev": "concurrently \"cd backend && npm run dev\" \"cd frontend && npm run dev\""
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+} 
