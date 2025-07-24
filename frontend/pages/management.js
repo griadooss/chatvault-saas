@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/router';
 import Head from 'next/head';
 
 export default function Management() {
@@ -13,7 +12,6 @@ export default function Management() {
   const [editingItem, setEditingItem] = useState(null);
   const [showAddForm, setShowAddForm] = useState('');
   const [formData, setFormData] = useState({ name: '', description: '' });
-  const router = useRouter();
 
   useEffect(() => {
     fetchManagementData();
@@ -21,21 +19,11 @@ export default function Management() {
 
   const fetchManagementData = async () => {
     try {
-      const token = localStorage.getItem('token');
-      
       const [sourcesRes, categoriesRes, projectsRes, formatsRes] = await Promise.all([
-        fetch('http://localhost:3001/api/management/sources', {
-          headers: { 'Authorization': `Bearer ${token}` }
-        }),
-        fetch('http://localhost:3001/api/management/categories', {
-          headers: { 'Authorization': `Bearer ${token}` }
-        }),
-        fetch('http://localhost:3001/api/management/projects', {
-          headers: { 'Authorization': `Bearer ${token}` }
-        }),
-        fetch('http://localhost:3001/api/management/formats', {
-          headers: { 'Authorization': `Bearer ${token}` }
-        })
+        fetch('http://localhost:3001/api/management/sources'),
+        fetch('http://localhost:3001/api/management/categories'),
+        fetch('http://localhost:3001/api/management/projects'),
+        fetch('http://localhost:3001/api/management/formats')
       ]);
 
       const [sourcesData, categoriesData, projectsData, formatsData] = await Promise.all([
@@ -58,11 +46,9 @@ export default function Management() {
 
   const handleAdd = async (type) => {
     try {
-      const token = localStorage.getItem('token');
       const response = await fetch(`http://localhost:3001/api/management/${type}`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(formData),
@@ -86,11 +72,9 @@ export default function Management() {
 
   const handleEdit = async (type, id) => {
     try {
-      const token = localStorage.getItem('token');
       const response = await fetch(`http://localhost:3001/api/management/${type}/${id}`, {
         method: 'PUT',
         headers: {
-          'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(formData),
@@ -116,12 +100,8 @@ export default function Management() {
     if (!confirm(`Are you sure you want to delete this ${type}?`)) return;
 
     try {
-      const token = localStorage.getItem('token');
       const response = await fetch(`http://localhost:3001/api/management/${type}/${id}`, {
         method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
       });
 
       if (response.ok) {
@@ -302,16 +282,6 @@ export default function Management() {
                     Settings
                   </a>
                 </nav>
-                <button
-                  onClick={() => {
-                    localStorage.removeItem('token');
-                    localStorage.removeItem('user');
-                    router.push('/');
-                  }}
-                  className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md text-sm font-medium"
-                >
-                  Logout
-                </button>
               </div>
             </div>
           </div>
