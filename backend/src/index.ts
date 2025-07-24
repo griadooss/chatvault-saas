@@ -75,7 +75,7 @@ app.get('/health', (req, res) => {
   });
 });
 
-// Routes (temporarily without authentication for testing)
+// Routes with authentication enabled
 app.use('/api/chats', chatRoutes);
 app.use('/api/management', managementRoutes);
 app.use('/api/subscriptions', subscriptionRoutes);

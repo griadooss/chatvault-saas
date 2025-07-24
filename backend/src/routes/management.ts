@@ -2,6 +2,7 @@ import express from 'express';
 import { PrismaClient } from '@prisma/client';
 import { body, query, validationResult } from 'express-validator';
 import { asyncHandler, createError } from '../middleware/errorHandler';
+import { authenticateToken, AuthenticatedRequest } from '../middleware/auth';
 
 const router = express.Router();
 const prisma = new PrismaClient();
@@ -9,18 +10,19 @@ const prisma = new PrismaClient();
 // ===== SOURCES =====
 
 // Get all sources
-router.get('/sources', asyncHandler(async (req, res) => {
+router.get('/sources', authenticateToken, asyncHandler(async (req: AuthenticatedRequest, res) => {
   const sources = await prisma.source.findMany({
+    where: { userId: req.user!.id },
     orderBy: { name: 'asc' },
   });
   res.json(sources);
 }));
 
 // Create source
-router.post('/sources', [
+router.post('/sources', authenticateToken, [
   body('name').notEmpty().withMessage('Name is required'),
   body('description').optional().isString().withMessage('Description must be a string'),
-], asyncHandler(async (req, res) => {
+], asyncHandler(async (req: AuthenticatedRequest, res) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
     throw createError('Validation failed', 400);
@@ -28,9 +30,12 @@ router.post('/sources', [
 
   const { name, description } = req.body;
 
-  // Check if source already exists
+  // Check if source already exists for this user
   const existingSource = await prisma.source.findFirst({
-    where: { name }
+    where: { 
+      name,
+      userId: req.user!.id
+    }
   });
 
   if (existingSource) {
@@ -41,7 +46,7 @@ router.post('/sources', [
     data: {
       name,
       description: description || null,
-      userId: 'user_test_admin', // Use existing test user
+      userId: req.user!.id,
     },
   });
 
@@ -49,10 +54,10 @@ router.post('/sources', [
 }));
 
 // Update source
-router.put('/sources/:id', [
+router.put('/sources/:id', authenticateToken, [
   body('name').notEmpty().withMessage('Name is required'),
   body('description').optional().isString().withMessage('Description must be a string'),
-], asyncHandler(async (req, res) => {
+], asyncHandler(async (req: AuthenticatedRequest, res) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
     throw createError('Validation failed', 400);
@@ -61,9 +66,12 @@ router.put('/sources/:id', [
   const { id } = req.params;
   const { name, description } = req.body;
 
-  // Check if source exists
+  // Check if source exists and belongs to user
   const existingSource = await prisma.source.findFirst({
-    where: { id }
+    where: { 
+      id,
+      userId: req.user!.id
+    }
   });
 
   if (!existingSource) {
@@ -82,12 +90,15 @@ router.put('/sources/:id', [
 }));
 
 // Delete source
-router.delete('/sources/:id', asyncHandler(async (req, res) => {
+router.delete('/sources/:id', authenticateToken, asyncHandler(async (req: AuthenticatedRequest, res) => {
   const { id } = req.params;
 
-  // Check if source exists
+  // Check if source exists and belongs to user
   const source = await prisma.source.findFirst({
-    where: { id }
+    where: { 
+      id,
+      userId: req.user!.id
+    }
   });
 
   if (!source) {

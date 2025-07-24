@@ -2,6 +2,7 @@ import express from 'express';
 import { PrismaClient } from '@prisma/client';
 import { body, query, validationResult } from 'express-validator';
 import { asyncHandler, createError } from '../middleware/errorHandler';
+import { authenticateToken, AuthenticatedRequest } from '../middleware/auth';
 
 import multer from 'multer';
 import path from 'path';
@@ -44,7 +45,7 @@ const upload = multer({
 });
 
 // Get all chats with filtering and pagination
-router.get('/', [
+router.get('/', authenticateToken, [
   query('page').optional().isInt({ min: 1 }).withMessage('Page must be a positive integer'),
   query('limit').optional().isInt({ min: 1, max: 100 }).withMessage('Limit must be between 1 and 100'),
   query('search').optional().isString().withMessage('Search must be a string'),
@@ -53,7 +54,7 @@ router.get('/', [
   query('projectId').optional().isString().withMessage('Project ID must be a string'),
   query('startDate').optional().isISO8601().withMessage('Start date must be valid ISO date'),
   query('endDate').optional().isISO8601().withMessage('End date must be valid ISO date'),
-], asyncHandler(async (req, res) => {
+], asyncHandler(async (req: AuthenticatedRequest, res) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
     throw createError('Validation failed', 400);
@@ -70,8 +71,10 @@ router.get('/', [
 
   const skip = (page - 1) * limit;
 
-  // Build where clause - temporarily remove user filtering for testing
-  const where: any = {};
+  // Build where clause with user filtering
+  const where: any = {
+    userId: req.user!.id
+  };
   
   if (search) {
     where.OR = [
@@ -127,13 +130,13 @@ router.get('/', [
 }));
 
 // Get single chat
-router.get('/:id', asyncHandler(async (req, res) => {
+router.get('/:id', authenticateToken, asyncHandler(async (req: AuthenticatedRequest, res) => {
   const { id } = req.params;
 
   const chat = await prisma.chat.findFirst({
     where: { 
       id,
-      userId: 'user_test_admin' // Temporarily hardcoded for testing
+      userId: req.user!.id
     },
     include: {
       source: { select: { id: true, name: true } },
@@ -154,7 +157,7 @@ router.get('/:id', asyncHandler(async (req, res) => {
 }));
 
 // Create new chat
-router.post('/', [
+router.post('/', authenticateToken, [
   body('title').notEmpty().withMessage('Title is required'),
   body('chatDate').isISO8601().withMessage('Chat date must be valid ISO date'),
   body('sourceId').optional().isString().withMessage('Source ID must be a string'),
@@ -164,7 +167,7 @@ router.post('/', [
   body('phaseId').optional().isString().withMessage('Phase ID must be a string'),
   body('description').optional().isString().withMessage('Description must be a string'),
   body('notes').optional().isString().withMessage('Notes must be a string'),
-], asyncHandler(async (req, res) => {
+], asyncHandler(async (req: AuthenticatedRequest, res) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
     throw createError('Validation failed', 400);
@@ -184,7 +187,7 @@ router.post('/', [
 
   const chat = await prisma.chat.create({
     data: {
-      userId: 'user_test_admin',
+      userId: req.user!.id,
       title,
       chatDate: new Date(chatDate),
       sourceId: sourceId || null,
@@ -209,7 +212,7 @@ router.post('/', [
 }));
 
 // Upload chat file
-router.post('/upload', upload.single('file'), asyncHandler(async (req, res) => {
+router.post('/upload', authenticateToken, upload.single('file'), asyncHandler(async (req: AuthenticatedRequest, res) => {
   if (!req.file) {
     throw createError('No file uploaded', 400);
   }
@@ -235,7 +238,7 @@ router.post('/upload', upload.single('file'), asyncHandler(async (req, res) => {
   const format = await prisma.fileFormat.findFirst({
     where: { 
       name: fileExtension,
-      userId: 'user_test_admin'
+      userId: req.user!.id
     }
   });
 
@@ -259,7 +262,7 @@ router.post('/upload', upload.single('file'), asyncHandler(async (req, res) => {
 
   const chat = await prisma.chat.create({
     data: {
-      userId: 'user_test_admin',
+      userId: req.user!.id,
       title: title || req.file.originalname,
       chatDate: chatDate ? new Date(chatDate) : new Date(),
       sourceId: sourceId || null,
@@ -288,7 +291,7 @@ router.post('/upload', upload.single('file'), asyncHandler(async (req, res) => {
 }));
 
 // Update chat
-router.put('/:id', [
+router.put('/:id', authenticateToken, [
   body('title').optional().notEmpty().withMessage('Title cannot be empty'),
   body('chatDate').optional().isISO8601().withMessage('Chat date must be valid ISO date'),
   body('sourceId').optional().custom((value) => {
@@ -323,7 +326,7 @@ router.put('/:id', [
   }),
   body('description').optional().isString().withMessage('Description must be a string'),
   body('notes').optional().isString().withMessage('Notes must be a string'),
-], asyncHandler(async (req, res) => {
+], asyncHandler(async (req: AuthenticatedRequest, res) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
     console.log('Validation errors:', errors.array());
@@ -346,7 +349,7 @@ router.put('/:id', [
   const existingChat = await prisma.chat.findFirst({
     where: { 
       id,
-      userId: 'user_test_admin'
+      userId: req.user!.id
     }
   });
 
@@ -376,14 +379,14 @@ router.put('/:id', [
 }));
 
 // Delete chat
-router.delete('/:id', asyncHandler(async (req, res) => {
+router.delete('/:id', authenticateToken, asyncHandler(async (req: AuthenticatedRequest, res) => {
   const { id } = req.params;
 
   // Check if chat exists and belongs to user
   const chat = await prisma.chat.findFirst({
     where: { 
       id,
-      userId: 'user_test_admin'
+      userId: req.user!.id
     }
   });
 
@@ -416,7 +419,7 @@ router.delete('/:id', asyncHandler(async (req, res) => {
 
 
 // Export selected chats as ZIP
-router.post('/export-selected', asyncHandler(async (req, res) => {
+router.post('/export-selected', authenticateToken, asyncHandler(async (req: AuthenticatedRequest, res) => {
   const { chatIds, format = 'all' } = req.body;
 
   if (!chatIds || !Array.isArray(chatIds) || chatIds.length === 0) {
@@ -432,7 +435,7 @@ router.post('/export-selected', asyncHandler(async (req, res) => {
   const chats = await prisma.chat.findMany({
     where: { 
       id: { in: chatIds },
-      userId: 'user_test_admin'
+      userId: req.user!.id
     },
     include: {
       source: { select: { name: true } },
@@ -574,14 +577,14 @@ router.post('/export-selected', asyncHandler(async (req, res) => {
 }));
 
 // Export individual chat
-router.get('/:id/export', asyncHandler(async (req, res) => {
+router.get('/:id/export', authenticateToken, asyncHandler(async (req: AuthenticatedRequest, res) => {
   const { id } = req.params;
   const { format = 'original' } = req.query;
 
   const chat = await prisma.chat.findFirst({
     where: { 
       id,
-      userId: 'user_test_admin'
+      userId: req.user!.id
     }
   });
 

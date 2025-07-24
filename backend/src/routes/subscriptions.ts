@@ -2,7 +2,7 @@ import express, { Request, Response } from 'express';
 import { body, validationResult } from 'express-validator';
 import { PrismaClient } from '@prisma/client';
 import Stripe from 'stripe';
-// import { authenticateToken, AuthenticatedRequest } from '../middleware/auth';
+import { authenticateToken, AuthenticatedRequest } from '../middleware/auth';
 import { asyncHandler, createError } from '../middleware/errorHandler';
 
 const router = express.Router();
@@ -17,8 +17,8 @@ if (process.env.STRIPE_SECRET_KEY) {
 }
 
 // Get user's subscription
-router.get('/', asyncHandler(async (req: Request, res: Response) => {
-  const userId = 'user_test_admin';
+router.get('/', authenticateToken, asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+  const userId = req.user!.id;
 
   const subscription = await prisma.subscription.findUnique({
     where: { userId },
@@ -29,9 +29,9 @@ router.get('/', asyncHandler(async (req: Request, res: Response) => {
 }));
 
 // Create checkout session
-router.post('/create-checkout-session', [
+router.post('/create-checkout-session', authenticateToken, [
   body('priceId').isString().notEmpty().withMessage('Price ID is required'),
-], asyncHandler(async (req: Request, res: Response) => {
+], asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
   if (!stripe) {
     throw createError('Stripe is not configured', 500);
   }
@@ -42,7 +42,7 @@ router.post('/create-checkout-session', [
   }
 
   const { priceId } = req.body;
-  const userId = 'user_test_admin';
+  const userId = req.user!.id;
 
   // Get or create Stripe customer
   let subscription = await prisma.subscription.findUnique({
@@ -182,12 +182,12 @@ async function handleSubscriptionDeletion(subscription: Stripe.Subscription) {
 }
 
 // Cancel subscription
-router.post('/cancel', asyncHandler(async (req: Request, res: Response) => {
+router.post('/cancel', authenticateToken, asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
   if (!stripe) {
     throw createError('Stripe is not configured', 500);
   }
 
-  const userId = 'user_test_admin';
+  const userId = req.user!.id;
 
   const subscription = await prisma.subscription.findUnique({
     where: { userId },
