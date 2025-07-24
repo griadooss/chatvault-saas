@@ -152,3 +152,4 @@ For support and questions, please open an issue on GitHub.
 # Force Vercel redeploy
 # Force Vercel to rebuild from latest commit
 # Force Vercel to use latest commit - middleware issue resolved
+# Force fresh deployment - gio 24 lug 2025, 19:56:43, AWST
