@@ -150,3 +150,4 @@ MIT License - see LICENSE file for details.
 
 For support and questions, please open an issue on GitHub.
 # Force Vercel redeploy
+# Force Vercel to rebuild from latest commit
