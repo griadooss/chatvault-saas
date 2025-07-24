@@ -149,3 +149,4 @@ MIT License - see LICENSE file for details.
 ## Support
 
 For support and questions, please open an issue on GitHub.
+# Force Vercel redeploy
