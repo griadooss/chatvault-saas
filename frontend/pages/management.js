@@ -215,26 +215,42 @@ export default function Management() {
     );
   };
 
-  const renderSection = (title, items, type) => (
-    <div className="bg-white rounded-lg shadow p-6">
-      <div className="flex justify-between items-center mb-4">
-        <h3 className="text-lg font-medium text-gray-900">{title}</h3>
-        <button
-          onClick={() => setShowAddForm(type)}
-          className="px-3 py-1 bg-green-600 text-white rounded text-sm hover:bg-green-700"
-        >
-          Add {title.slice(0, -1)}
-        </button>
+  const renderSection = (title, items, type) => {
+    // Handle special cases for button text
+    const getButtonText = (title) => {
+      switch (title) {
+        case 'Categories':
+          return 'Add Category';
+        case 'Chat Sources':
+          return 'Add Chat Source';
+        case 'Supported File Formats':
+          return 'Add Supported File Format';
+        default:
+          return `Add ${title.slice(0, -1)}`;
+      }
+    };
+
+    return (
+      <div className="bg-white rounded-lg shadow p-6">
+        <div className="flex justify-between items-center mb-4">
+          <h3 className="text-lg font-medium text-gray-900">{title}</h3>
+          <button
+            onClick={() => setShowAddForm(type)}
+            className="px-3 py-1 bg-green-600 text-white rounded text-sm hover:bg-green-700"
+          >
+            {getButtonText(title)}
+          </button>
+        </div>
+        <div className="space-y-2">
+          {showAddForm === type && renderItem({}, type)}
+          {items.map((item) => renderItem(item, type))}
+          {items.length === 0 && showAddForm !== type && (
+            <p className="text-gray-500 text-sm italic">No {type} found. Add one to get started.</p>
+          )}
+        </div>
       </div>
-      <div className="space-y-2">
-        {showAddForm === type && renderItem({}, type)}
-        {items.map((item) => renderItem(item, type))}
-        {items.length === 0 && showAddForm !== type && (
-          <p className="text-gray-500 text-sm italic">No {type} found. Add one to get started.</p>
-        )}
-      </div>
-    </div>
-  );
+    );
+  };
 
   if (loading) {
     return (
