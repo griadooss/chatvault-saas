@@ -7,6 +7,7 @@ import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
 import archiver from 'archiver';
+import TurndownService from 'turndown';
 
 const router = express.Router();
 const prisma = new PrismaClient();
@@ -390,7 +391,7 @@ router.post('/export-selected', requireUser, asyncHandler(async (req: Authentica
   }
 
   // Validate format parameter
-  if (!['all', 'original', 'html'].includes(format)) {
+  if (!['all', 'original', 'html', 'markdown'].includes(format)) {
     throw createError('Invalid format specified', 400);
   }
 
@@ -446,7 +447,8 @@ router.post('/export-selected', requireUser, asyncHandler(async (req: Authentica
     if (chat.originalFile && (format === 'all' || format === 'original')) {
       filePath = path.join(__dirname, '../../uploads', chat.originalFile);
       if (fs.existsSync(filePath)) {
-        fileName = `${chat.title}${path.extname(chat.originalFile)}`;
+        // Use the original filename to preserve the correct extension
+        fileName = chat.originalFile;
         archive.file(filePath, { name: fileName });
         filesAdded++;
         console.log(`Added original file: ${fileName}`);
@@ -459,12 +461,59 @@ router.post('/export-selected', requireUser, asyncHandler(async (req: Authentica
     if (chat.htmlFile && (format === 'all' || format === 'html')) {
       filePath = path.join(__dirname, '../../uploads', chat.htmlFile);
       if (fs.existsSync(filePath)) {
-        fileName = `${chat.title}.html`;
+        // Remove any existing .html extension from title to avoid double extension
+        const cleanTitle = chat.title.replace(/\.html$/i, '');
+        fileName = `${cleanTitle}.html`;
         archive.file(filePath, { name: fileName });
         filesAdded++;
         console.log(`Added HTML file: ${fileName}`);
       } else {
         console.log(`HTML file not found: ${filePath}`);
+      }
+    }
+
+    // Add Markdown file based on format selection
+    if (format === 'markdown') {
+      let markdownContent = '';
+      
+      // Try to get content from original file first
+      if (chat.originalFile) {
+        const originalPath = path.join(__dirname, '../../uploads', chat.originalFile);
+        if (fs.existsSync(originalPath)) {
+          const fileExt = path.extname(chat.originalFile).toLowerCase();
+          if (fileExt === '.md') {
+            // Already markdown, use as-is
+            markdownContent = fs.readFileSync(originalPath, 'utf-8');
+          } else {
+            // Convert from original format to markdown
+            const originalContent = fs.readFileSync(originalPath, 'utf-8');
+            markdownContent = `# ${chat.title}\n\n${originalContent}`;
+          }
+        }
+      }
+      
+      // If no original file or not markdown, try converting from HTML
+      if (!markdownContent && chat.htmlFile) {
+        const htmlPath = path.join(__dirname, '../../uploads', chat.htmlFile);
+        if (fs.existsSync(htmlPath)) {
+          const htmlContent = fs.readFileSync(htmlPath, 'utf-8');
+          const turndownService = new TurndownService();
+          markdownContent = turndownService.turndown(htmlContent);
+        }
+      }
+      
+      // If still no content, create basic markdown from metadata
+      if (!markdownContent) {
+        markdownContent = `# ${chat.title}\n\n${chat.description || 'No content available'}\n\n**Notes:** ${chat.notes || 'None'}`;
+      }
+      
+      if (markdownContent) {
+        // Remove any existing .md extension from title to avoid double extension
+        const cleanTitle = chat.title.replace(/\.md$/i, '');
+        const fileName = `${cleanTitle}.md`;
+        archive.append(markdownContent, { name: fileName });
+        filesAdded++;
+        console.log(`Added Markdown file: ${fileName}`);
       }
     }
 
@@ -512,10 +561,13 @@ router.get('/:id/export', requireUser, asyncHandler(async (req: AuthenticatedReq
 
   if (format === 'html' && chat.htmlFile) {
     filePath = path.join(__dirname, '../../uploads', chat.htmlFile);
-    fileName = `${chat.title}.html`;
+    // Remove any existing .html extension from title to avoid double extension
+    const cleanTitle = chat.title.replace(/\.html$/i, '');
+    fileName = `${cleanTitle}.html`;
   } else if (chat.originalFile) {
     filePath = path.join(__dirname, '../../uploads', chat.originalFile);
-    fileName = `${chat.title}${path.extname(chat.originalFile)}`;
+    // Use the original filename to preserve the correct extension
+    fileName = chat.originalFile;
   } else {
     throw createError('No file available for export', 404);
   }

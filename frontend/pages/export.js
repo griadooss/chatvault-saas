@@ -231,11 +231,13 @@ export default function Export() {
                       <option value="all">All formats (original + HTML)</option>
                       <option value="original">Original format only</option>
                       <option value="html">HTML format only</option>
+                      <option value="markdown">Markdown format only</option>
                     </select>
                     <p className="text-xs text-blue-600 mt-1">
                       {exportFormat === 'all' && "Exports both original files and HTML versions"}
                       {exportFormat === 'original' && "Exports only the original file format (.md, .txt, etc.)"}
                       {exportFormat === 'html' && "Exports only the HTML version (if available)"}
+                      {exportFormat === 'markdown' && "Exports content as Markdown (converts HTML to MD)"}
                     </p>
                   </div>
 

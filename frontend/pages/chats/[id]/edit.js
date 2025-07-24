@@ -16,10 +16,23 @@ export default function EditChat() {
   const [description, setDescription] = useState('');
   const [notes, setNotes] = useState('');
   const [chatDate, setChatDate] = useState('');
+  const [sourceId, setSourceId] = useState('');
+  const [categoryId, setCategoryId] = useState('');
+  const [subcategoryId, setSubcategoryId] = useState('');
+  const [projectId, setProjectId] = useState('');
+  const [phaseId, setPhaseId] = useState('');
+
+  // Lookup data
+  const [sources, setSources] = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [subcategories, setSubcategories] = useState([]);
+  const [projects, setProjects] = useState([]);
+  const [phases, setPhases] = useState([]);
 
   useEffect(() => {
     if (id) {
       fetchChat();
+      fetchLookupData();
     }
   }, [id]);
 
@@ -41,6 +54,11 @@ export default function EditChat() {
         setDescription(data.description || '');
         setNotes(data.notes || '');
         setChatDate(data.chatDate ? new Date(data.chatDate).toISOString().split('T')[0] : '');
+        setSourceId(data.sourceId || '');
+        setCategoryId(data.categoryId || '');
+        setSubcategoryId(data.subcategoryId || '');
+        setProjectId(data.projectId || '');
+        setPhaseId(data.phaseId || '');
       } else {
         setError('Failed to load chat');
       }
@@ -48,6 +66,32 @@ export default function EditChat() {
       setError('Connection error');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchLookupData = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const headers = {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      };
+
+      const [sourcesRes, categoriesRes, subcategoriesRes, projectsRes, phasesRes] = await Promise.all([
+        fetch('http://localhost:3001/api/management/sources', { headers }),
+        fetch('http://localhost:3001/api/management/categories', { headers }),
+        fetch('http://localhost:3001/api/management/subcategories', { headers }),
+        fetch('http://localhost:3001/api/management/projects', { headers }),
+        fetch('http://localhost:3001/api/management/phases', { headers }),
+      ]);
+
+      if (sourcesRes.ok) setSources(await sourcesRes.json());
+      if (categoriesRes.ok) setCategories(await categoriesRes.json());
+      if (subcategoriesRes.ok) setSubcategories(await subcategoriesRes.json());
+      if (projectsRes.ok) setProjects(await projectsRes.json());
+      if (phasesRes.ok) setPhases(await phasesRes.json());
+    } catch (error) {
+      console.error('Error fetching lookup data:', error);
     }
   };
 
@@ -70,6 +114,11 @@ export default function EditChat() {
           description,
           notes,
           chatDate: chatDate ? new Date(chatDate).toISOString() : new Date().toISOString(),
+          sourceId: sourceId || null,
+          categoryId: categoryId || null,
+          subcategoryId: subcategoryId || null,
+          projectId: projectId || null,
+          phaseId: phaseId || null,
         }),
       });
 
@@ -263,26 +312,110 @@ export default function EditChat() {
                 />
               </div>
 
-              {/* Read-only fields */}
+              {/* Metadata fields */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label htmlFor="sourceId" className="block text-sm font-medium text-gray-700 mb-2">
+                    Source
+                  </label>
+                  <select
+                    id="sourceId"
+                    value={sourceId}
+                    onChange={(e) => setSourceId(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                  >
+                    <option value="">Select Source</option>
+                    {sources.map((source) => (
+                      <option key={source.id} value={source.id}>
+                        {source.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label htmlFor="categoryId" className="block text-sm font-medium text-gray-700 mb-2">
+                    Category
+                  </label>
+                  <select
+                    id="categoryId"
+                    value={categoryId}
+                    onChange={(e) => setCategoryId(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                  >
+                    <option value="">Select Category</option>
+                    {categories.map((category) => (
+                      <option key={category.id} value={category.id}>
+                        {category.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label htmlFor="subcategoryId" className="block text-sm font-medium text-gray-700 mb-2">
+                    Subcategory
+                  </label>
+                  <select
+                    id="subcategoryId"
+                    value={subcategoryId}
+                    onChange={(e) => setSubcategoryId(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                  >
+                    <option value="">Select Subcategory</option>
+                    {subcategories.map((subcategory) => (
+                      <option key={subcategory.id} value={subcategory.id}>
+                        {subcategory.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label htmlFor="projectId" className="block text-sm font-medium text-gray-700 mb-2">
+                    Project
+                  </label>
+                  <select
+                    id="projectId"
+                    value={projectId}
+                    onChange={(e) => setProjectId(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                  >
+                    <option value="">Select Project</option>
+                    {projects.map((project) => (
+                      <option key={project.id} value={project.id}>
+                        {project.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label htmlFor="phaseId" className="block text-sm font-medium text-gray-700 mb-2">
+                    Phase
+                  </label>
+                  <select
+                    id="phaseId"
+                    value={phaseId}
+                    onChange={(e) => setPhaseId(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                  >
+                    <option value="">Select Phase</option>
+                    {phases.map((phase) => (
+                      <option key={phase.id} value={phase.id}>
+                        {phase.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {/* Read-only format field */}
               <div className="bg-gray-50 border border-gray-200 rounded-md p-4">
-                <h3 className="text-sm font-medium text-gray-700 mb-3">Chat Information (Read-only)</h3>
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div>
-                    <span className="font-medium text-gray-700">Source:</span>
-                    <p className="text-gray-900">{chat.source?.name || '-'}</p>
-                  </div>
-                  <div>
-                    <span className="font-medium text-gray-700">Category:</span>
-                    <p className="text-gray-900">{chat.category?.name || '-'}</p>
-                  </div>
-                  <div>
-                    <span className="font-medium text-gray-700">Format:</span>
-                    <p className="text-gray-900">{chat.format?.name || '-'}</p>
-                  </div>
-                  <div>
-                    <span className="font-medium text-gray-700">Project:</span>
-                    <p className="text-gray-900">{chat.project?.name || '-'}</p>
-                  </div>
+                <h3 className="text-sm font-medium text-gray-700 mb-3">File Information (Read-only)</h3>
+                <div className="text-sm">
+                  <span className="font-medium text-gray-700">Format:</span>
+                  <p className="text-gray-900">{chat.format?.name || '-'}</p>
                 </div>
               </div>
 

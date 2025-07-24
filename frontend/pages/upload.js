@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
 
@@ -7,10 +7,52 @@ export default function Upload() {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [notes, setNotes] = useState('');
+  const [sourceId, setSourceId] = useState('');
+  const [categoryId, setCategoryId] = useState('');
+  const [subcategoryId, setSubcategoryId] = useState('');
+  const [projectId, setProjectId] = useState('');
+  const [phaseId, setPhaseId] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const router = useRouter();
+
+  // Lookup data
+  const [sources, setSources] = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [subcategories, setSubcategories] = useState([]);
+  const [projects, setProjects] = useState([]);
+  const [phases, setPhases] = useState([]);
+
+  useEffect(() => {
+    fetchLookupData();
+  }, []);
+
+  const fetchLookupData = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const headers = {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      };
+
+      const [sourcesRes, categoriesRes, subcategoriesRes, projectsRes, phasesRes] = await Promise.all([
+        fetch('http://localhost:3001/api/management/sources', { headers }),
+        fetch('http://localhost:3001/api/management/categories', { headers }),
+        fetch('http://localhost:3001/api/management/subcategories', { headers }),
+        fetch('http://localhost:3001/api/management/projects', { headers }),
+        fetch('http://localhost:3001/api/management/phases', { headers }),
+      ]);
+
+      if (sourcesRes.ok) setSources(await sourcesRes.json());
+      if (categoriesRes.ok) setCategories(await categoriesRes.json());
+      if (subcategoriesRes.ok) setSubcategories(await subcategoriesRes.json());
+      if (projectsRes.ok) setProjects(await projectsRes.json());
+      if (phasesRes.ok) setPhases(await phasesRes.json());
+    } catch (error) {
+      console.error('Error fetching lookup data:', error);
+    }
+  };
 
   const handleFileChange = (e) => {
     const selectedFile = e.target.files[0];
@@ -49,6 +91,11 @@ export default function Upload() {
       formData.append('title', title);
       formData.append('description', description);
       formData.append('notes', notes);
+      if (sourceId) formData.append('sourceId', sourceId);
+      if (categoryId) formData.append('categoryId', categoryId);
+      if (subcategoryId) formData.append('subcategoryId', subcategoryId);
+      if (projectId) formData.append('projectId', projectId);
+      if (phaseId) formData.append('phaseId', phaseId);
 
       const response = await fetch('http://localhost:3001/api/chats/upload', {
         method: 'POST',
@@ -66,6 +113,11 @@ export default function Upload() {
         setTitle('');
         setDescription('');
         setNotes('');
+        setSourceId('');
+        setCategoryId('');
+        setSubcategoryId('');
+        setProjectId('');
+        setPhaseId('');
         // Reset file input
         const fileInput = document.getElementById('file-input');
         if (fileInput) fileInput.value = '';
@@ -205,6 +257,104 @@ export default function Upload() {
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                   placeholder="Enter additional notes"
                 />
+              </div>
+
+              {/* Metadata fields */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label htmlFor="sourceId" className="block text-sm font-medium text-gray-700 mb-2">
+                    Source
+                  </label>
+                  <select
+                    id="sourceId"
+                    value={sourceId}
+                    onChange={(e) => setSourceId(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                  >
+                    <option value="">Select Source</option>
+                    {sources.map((source) => (
+                      <option key={source.id} value={source.id}>
+                        {source.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label htmlFor="categoryId" className="block text-sm font-medium text-gray-700 mb-2">
+                    Category
+                  </label>
+                  <select
+                    id="categoryId"
+                    value={categoryId}
+                    onChange={(e) => setCategoryId(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                  >
+                    <option value="">Select Category</option>
+                    {categories.map((category) => (
+                      <option key={category.id} value={category.id}>
+                        {category.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label htmlFor="subcategoryId" className="block text-sm font-medium text-gray-700 mb-2">
+                    Subcategory
+                  </label>
+                  <select
+                    id="subcategoryId"
+                    value={subcategoryId}
+                    onChange={(e) => setSubcategoryId(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                  >
+                    <option value="">Select Subcategory</option>
+                    {subcategories.map((subcategory) => (
+                      <option key={subcategory.id} value={subcategory.id}>
+                        {subcategory.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label htmlFor="projectId" className="block text-sm font-medium text-gray-700 mb-2">
+                    Project
+                  </label>
+                  <select
+                    id="projectId"
+                    value={projectId}
+                    onChange={(e) => setProjectId(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                  >
+                    <option value="">Select Project</option>
+                    {projects.map((project) => (
+                      <option key={project.id} value={project.id}>
+                        {project.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label htmlFor="phaseId" className="block text-sm font-medium text-gray-700 mb-2">
+                    Phase
+                  </label>
+                  <select
+                    id="phaseId"
+                    value={phaseId}
+                    onChange={(e) => setPhaseId(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                  >
+                    <option value="">Select Phase</option>
+                    {phases.map((phase) => (
+                      <option key={phase.id} value={phase.id}>
+                        {phase.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </div>
 
               <div className="flex justify-end space-x-4">
