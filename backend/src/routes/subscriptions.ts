@@ -1,4 +1,4 @@
-import express from 'express';
+import express, { Request, Response } from 'express';
 import { body, validationResult } from 'express-validator';
 import { PrismaClient } from '@prisma/client';
 import Stripe from 'stripe';
@@ -9,13 +9,16 @@ import { createError } from '../utils/errorHandler';
 const router = express.Router();
 const prisma = new PrismaClient();
 
-// Initialize Stripe
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2023-10-16',
-});
+// Initialize Stripe only if secret key is available
+let stripe: Stripe | null = null;
+if (process.env.STRIPE_SECRET_KEY) {
+  stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
+    apiVersion: '2025-06-30.basil',
+  });
+}
 
 // Get user's subscription
-router.get('/', authenticateToken, asyncHandler(async (req: AuthenticatedRequest, res) => {
+router.get('/', authenticateToken, asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
   const userId = req.user!.id;
 
   const subscription = await prisma.subscription.findUnique({
@@ -29,7 +32,11 @@ router.get('/', authenticateToken, asyncHandler(async (req: AuthenticatedRequest
 // Create checkout session
 router.post('/create-checkout-session', [
   body('priceId').isString().notEmpty().withMessage('Price ID is required'),
-], authenticateToken, asyncHandler(async (req: AuthenticatedRequest, res) => {
+], authenticateToken, asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+  if (!stripe) {
+    throw createError('Stripe is not configured', 500);
+  }
+
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
     throw createError(`Validation failed: ${errors.array().map(e => e.msg).join(', ')}`, 400);
@@ -92,17 +99,21 @@ router.post('/create-checkout-session', [
 }));
 
 // Stripe webhook handler
-router.post('/webhook', express.raw({ type: 'application/json' }), asyncHandler(async (req, res) => {
-  const sig = req.headers['stripe-signature'] as string;
+router.post('/webhook', express.raw({ type: 'application/json' }), asyncHandler(async (req: Request, res: Response) => {
+  if (!stripe) {
+    return res.status(500).json({ error: 'Stripe is not configured' });
+  }
+
+  const sig = (req.headers as any)['stripe-signature'] as string;
   const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET!;
 
   let event: Stripe.Event;
 
   try {
-    event = stripe.webhooks.constructEvent(req.body, sig, endpointSecret);
-  } catch (err) {
+    event = stripe.webhooks.constructEvent(req.body as Buffer, sig, endpointSecret);
+  } catch (err: any) {
     console.error('Webhook signature verification failed:', err);
-    return res.status(400).send(`Webhook Error: ${err}`);
+    return res.status(400).send(`Webhook Error: ${err.message}`);
   }
 
   // Handle the event
@@ -142,8 +153,8 @@ async function handleSubscriptionChange(subscription: Stripe.Subscription) {
       stripeSubscriptionId: subscription.id,
       status: subscription.status,
       planId: planId,
-      currentPeriodStart: new Date(subscription.current_period_start * 1000),
-      currentPeriodEnd: new Date(subscription.current_period_end * 1000),
+      currentPeriodStart: new Date((subscription as any).current_period_start * 1000),
+      currentPeriodEnd: new Date((subscription as any).current_period_end * 1000),
       cancelAtPeriodEnd: subscription.cancel_at_period_end,
     },
     create: {
@@ -151,8 +162,8 @@ async function handleSubscriptionChange(subscription: Stripe.Subscription) {
       stripeSubscriptionId: subscription.id,
       status: subscription.status,
       planId: planId,
-      currentPeriodStart: new Date(subscription.current_period_start * 1000),
-      currentPeriodEnd: new Date(subscription.current_period_end * 1000),
+      currentPeriodStart: new Date((subscription as any).current_period_start * 1000),
+      currentPeriodEnd: new Date((subscription as any).current_period_end * 1000),
       cancelAtPeriodEnd: subscription.cancel_at_period_end,
       userId: '', // This should be set from customer metadata
     },
@@ -172,7 +183,11 @@ async function handleSubscriptionDeletion(subscription: Stripe.Subscription) {
 }
 
 // Cancel subscription
-router.post('/cancel', authenticateToken, asyncHandler(async (req: AuthenticatedRequest, res) => {
+router.post('/cancel', authenticateToken, asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+  if (!stripe) {
+    throw createError('Stripe is not configured', 500);
+  }
+
   const userId = req.user!.id;
 
   const subscription = await prisma.subscription.findUnique({
