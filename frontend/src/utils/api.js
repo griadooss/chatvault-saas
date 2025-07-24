@@ -1,4 +1,4 @@
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://hbg-budget-app-7.onrender.com';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://chatvault-production.up.railway.app';
 
 export const apiCall = async (endpoint, options = {}) => {
   const url = `${API_BASE_URL}${endpoint}`;
