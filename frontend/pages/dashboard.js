@@ -1,33 +1,19 @@
 import { useState, useEffect } from 'react';
-import { useUser, useClerk } from '@clerk/nextjs';
-import { useRouter } from 'next/router';
 import Head from 'next/head';
 
 export default function Dashboard() {
-  const { user, isLoaded } = useUser();
-  const { signOut } = useClerk();
   const [chatSummary, setChatSummary] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const router = useRouter();
 
   useEffect(() => {
-    if (isLoaded && !user) {
-      router.push('/');
-      return;
-    }
-
-    if (user) {
-      fetchChatSummary();
-    }
-  }, [user, isLoaded]);
+    fetchChatSummary();
+  }, []);
 
   const fetchChatSummary = async () => {
     try {
-      const token = await user.getToken();
       const response = await fetch(`http://localhost:3001/api/chats`, {
         headers: {
-          'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
       });
@@ -45,12 +31,7 @@ export default function Dashboard() {
     }
   };
 
-  const handleLogout = async () => {
-    await signOut();
-    router.push('/');
-  };
-
-  if (!isLoaded || loading) {
+  if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
@@ -59,10 +40,6 @@ export default function Dashboard() {
         </div>
       </div>
     );
-  }
-
-  if (!user) {
-    return null; // Will redirect to login
   }
 
   return (
@@ -109,14 +86,8 @@ export default function Dashboard() {
                 </nav>
                 <div className="flex items-center space-x-2">
                   <span className="text-sm text-gray-700">
-                    Welcome, {user.firstName || user.emailAddresses[0]?.emailAddress}
+                    Welcome, User
                   </span>
-                  <button
-                    onClick={handleLogout}
-                    className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md text-sm font-medium"
-                  >
-                    Sign Out
-                  </button>
                 </div>
               </div>
             </div>
