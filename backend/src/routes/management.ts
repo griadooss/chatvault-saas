@@ -2,7 +2,6 @@ import express from 'express';
 import { PrismaClient } from '@prisma/client';
 import { body, query, validationResult } from 'express-validator';
 import { asyncHandler, createError } from '../middleware/errorHandler';
-import { requireUser, AuthenticatedRequest } from '../middleware/auth';
 
 const router = express.Router();
 const prisma = new PrismaClient();
@@ -10,9 +9,8 @@ const prisma = new PrismaClient();
 // ===== SOURCES =====
 
 // Get all sources
-router.get('/sources', requireUser, asyncHandler(async (req: AuthenticatedRequest, res) => {
+router.get('/sources', asyncHandler(async (req, res) => {
   const sources = await prisma.source.findMany({
-    where: { userId: req.user!.id },
     orderBy: { name: 'asc' },
   });
   res.json(sources);
@@ -22,7 +20,7 @@ router.get('/sources', requireUser, asyncHandler(async (req: AuthenticatedReques
 router.post('/sources', [
   body('name').notEmpty().withMessage('Name is required'),
   body('description').optional().isString().withMessage('Description must be a string'),
-], requireUser, asyncHandler(async (req: AuthenticatedRequest, res) => {
+], asyncHandler(async (req, res) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
     throw createError('Validation failed', 400);
@@ -30,12 +28,9 @@ router.post('/sources', [
 
   const { name, description } = req.body;
 
-  // Check if source already exists for this user
+  // Check if source already exists
   const existingSource = await prisma.source.findFirst({
-    where: { 
-      name,
-      userId: req.user!.id
-    }
+    where: { name }
   });
 
   if (existingSource) {
@@ -46,7 +41,7 @@ router.post('/sources', [
     data: {
       name,
       description: description || null,
-      userId: req.user!.id,
+      userId: 'test-user', // Temporary for testing
     },
   });
 
@@ -57,7 +52,7 @@ router.post('/sources', [
 router.put('/sources/:id', [
   body('name').notEmpty().withMessage('Name is required'),
   body('description').optional().isString().withMessage('Description must be a string'),
-], requireUser, asyncHandler(async (req: AuthenticatedRequest, res) => {
+], asyncHandler(async (req, res) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
     throw createError('Validation failed', 400);
@@ -66,12 +61,9 @@ router.put('/sources/:id', [
   const { id } = req.params;
   const { name, description } = req.body;
 
-  // Check if source exists and belongs to user
+  // Check if source exists
   const existingSource = await prisma.source.findFirst({
-    where: { 
-      id,
-      userId: req.user!.id
-    }
+    where: { id }
   });
 
   if (!existingSource) {
@@ -90,43 +82,30 @@ router.put('/sources/:id', [
 }));
 
 // Delete source
-router.delete('/sources/:id', requireUser, asyncHandler(async (req: AuthenticatedRequest, res) => {
+router.delete('/sources/:id', asyncHandler(async (req, res) => {
   const { id } = req.params;
 
-  // Check if source exists and belongs to user
+  // Check if source exists
   const source = await prisma.source.findFirst({
-    where: { 
-      id,
-      userId: req.user!.id
-    }
+    where: { id }
   });
 
   if (!source) {
     throw createError('Source not found', 404);
   }
 
-  // Check if source is used by any chats
-  const chatCount = await prisma.chat.count({
-    where: { sourceId: id }
-  });
-
-  if (chatCount > 0) {
-    throw createError('Cannot delete source that is used by chats', 400);
-  }
-
   await prisma.source.delete({
-    where: { id }
+    where: { id },
   });
 
-  res.json({ message: 'Source deleted successfully' });
+  res.status(204).send();
 }));
 
 // ===== CATEGORIES =====
 
 // Get all categories
-router.get('/categories', requireUser, asyncHandler(async (req: AuthenticatedRequest, res) => {
+router.get('/categories', asyncHandler(async (req, res) => {
   const categories = await prisma.category.findMany({
-    where: { userId: req.user!.id },
     orderBy: { name: 'asc' },
   });
   res.json(categories);
@@ -136,7 +115,7 @@ router.get('/categories', requireUser, asyncHandler(async (req: AuthenticatedReq
 router.post('/categories', [
   body('name').notEmpty().withMessage('Name is required'),
   body('description').optional().isString().withMessage('Description must be a string'),
-], requireUser, asyncHandler(async (req: AuthenticatedRequest, res) => {
+], asyncHandler(async (req, res) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
     throw createError('Validation failed', 400);
@@ -144,12 +123,9 @@ router.post('/categories', [
 
   const { name, description } = req.body;
 
-  // Check if category already exists for this user
+  // Check if category already exists
   const existingCategory = await prisma.category.findFirst({
-    where: { 
-      name,
-      userId: req.user!.id
-    }
+    where: { name }
   });
 
   if (existingCategory) {
@@ -160,7 +136,7 @@ router.post('/categories', [
     data: {
       name,
       description: description || null,
-      userId: req.user!.id,
+      userId: 'test-user', // Temporary for testing
     },
   });
 
@@ -171,7 +147,7 @@ router.post('/categories', [
 router.put('/categories/:id', [
   body('name').notEmpty().withMessage('Name is required'),
   body('description').optional().isString().withMessage('Description must be a string'),
-], requireUser, asyncHandler(async (req: AuthenticatedRequest, res) => {
+], asyncHandler(async (req, res) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
     throw createError('Validation failed', 400);
@@ -180,12 +156,9 @@ router.put('/categories/:id', [
   const { id } = req.params;
   const { name, description } = req.body;
 
-  // Check if category exists and belongs to user
+  // Check if category exists
   const existingCategory = await prisma.category.findFirst({
-    where: { 
-      id,
-      userId: req.user!.id
-    }
+    where: { id }
   });
 
   if (!existingCategory) {
@@ -204,44 +177,32 @@ router.put('/categories/:id', [
 }));
 
 // Delete category
-router.delete('/categories/:id', requireUser, asyncHandler(async (req: AuthenticatedRequest, res) => {
+router.delete('/categories/:id', asyncHandler(async (req, res) => {
   const { id } = req.params;
 
-  // Check if category exists and belongs to user
+  // Check if category exists
   const category = await prisma.category.findFirst({
-    where: { 
-      id,
-      userId: req.user!.id
-    }
+    where: { id }
   });
 
   if (!category) {
     throw createError('Category not found', 404);
   }
 
-  // Check if category is used by any chats
-  const chatCount = await prisma.chat.count({
-    where: { categoryId: id }
-  });
-
-  if (chatCount > 0) {
-    throw createError('Cannot delete category that is used by chats', 400);
-  }
-
   await prisma.category.delete({
-    where: { id }
+    where: { id },
   });
 
-  res.json({ message: 'Category deleted successfully' });
+  res.status(204).send();
 }));
 
 // ===== SUBCATEGORIES =====
 
 // Get subcategories by category
-router.get('/subcategories', requireUser, asyncHandler(async (req: AuthenticatedRequest, res) => {
+router.get('/subcategories', asyncHandler(async (req, res) => {
   const { categoryId } = req.query;
 
-  const where: any = { userId: req.user!.id };
+  const where: any = {};
   if (categoryId) {
     where.categoryId = categoryId;
   }
@@ -261,7 +222,7 @@ router.post('/subcategories', [
   body('name').notEmpty().withMessage('Name is required'),
   body('categoryId').notEmpty().withMessage('Category ID is required'),
   body('description').optional().isString().withMessage('Description must be a string'),
-], requireUser, asyncHandler(async (req: AuthenticatedRequest, res) => {
+], asyncHandler(async (req, res) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
     throw createError('Validation failed', 400);
@@ -269,25 +230,18 @@ router.post('/subcategories', [
 
   const { name, categoryId, description } = req.body;
 
-  // Check if category exists and belongs to user
+  // Check if category exists
   const category = await prisma.category.findFirst({
-    where: { 
-      id: categoryId,
-      userId: req.user!.id
-    }
+    where: { id: categoryId }
   });
 
   if (!category) {
     throw createError('Category not found', 404);
   }
 
-  // Check if subcategory already exists for this category
+  // Check if subcategory already exists
   const existingSubcategory = await prisma.subcategory.findFirst({
-    where: { 
-      name,
-      categoryId,
-      userId: req.user!.id
-    }
+    where: { name, categoryId }
   });
 
   if (existingSubcategory) {
@@ -299,7 +253,7 @@ router.post('/subcategories', [
       name,
       description: description || null,
       categoryId,
-      userId: req.user!.id,
+      userId: 'test-user', // Temporary for testing
     },
     include: {
       category: { select: { id: true, name: true } }
@@ -313,7 +267,7 @@ router.post('/subcategories', [
 router.put('/subcategories/:id', [
   body('name').notEmpty().withMessage('Name is required'),
   body('description').optional().isString().withMessage('Description must be a string'),
-], requireUser, asyncHandler(async (req: AuthenticatedRequest, res) => {
+], asyncHandler(async (req, res) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
     throw createError('Validation failed', 400);
@@ -322,12 +276,9 @@ router.put('/subcategories/:id', [
   const { id } = req.params;
   const { name, description } = req.body;
 
-  // Check if subcategory exists and belongs to user
+  // Check if subcategory exists
   const existingSubcategory = await prisma.subcategory.findFirst({
-    where: { 
-      id,
-      userId: req.user!.id
-    }
+    where: { id }
   });
 
   if (!existingSubcategory) {
@@ -349,43 +300,30 @@ router.put('/subcategories/:id', [
 }));
 
 // Delete subcategory
-router.delete('/subcategories/:id', requireUser, asyncHandler(async (req: AuthenticatedRequest, res) => {
+router.delete('/subcategories/:id', asyncHandler(async (req, res) => {
   const { id } = req.params;
 
-  // Check if subcategory exists and belongs to user
+  // Check if subcategory exists
   const subcategory = await prisma.subcategory.findFirst({
-    where: { 
-      id,
-      userId: req.user!.id
-    }
+    where: { id }
   });
 
   if (!subcategory) {
     throw createError('Subcategory not found', 404);
   }
 
-  // Check if subcategory is used by any chats
-  const chatCount = await prisma.chat.count({
-    where: { subcategoryId: id }
-  });
-
-  if (chatCount > 0) {
-    throw createError('Cannot delete subcategory that is used by chats', 400);
-  }
-
   await prisma.subcategory.delete({
-    where: { id }
+    where: { id },
   });
 
-  res.json({ message: 'Subcategory deleted successfully' });
+  res.status(204).send();
 }));
 
 // ===== PROJECTS =====
 
 // Get all projects
-router.get('/projects', requireUser, asyncHandler(async (req: AuthenticatedRequest, res) => {
+router.get('/projects', asyncHandler(async (req, res) => {
   const projects = await prisma.project.findMany({
-    where: { userId: req.user!.id },
     orderBy: { name: 'asc' },
   });
   res.json(projects);
@@ -395,7 +333,7 @@ router.get('/projects', requireUser, asyncHandler(async (req: AuthenticatedReque
 router.post('/projects', [
   body('name').notEmpty().withMessage('Name is required'),
   body('description').optional().isString().withMessage('Description must be a string'),
-], requireUser, asyncHandler(async (req: AuthenticatedRequest, res) => {
+], asyncHandler(async (req, res) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
     throw createError('Validation failed', 400);
@@ -403,12 +341,9 @@ router.post('/projects', [
 
   const { name, description } = req.body;
 
-  // Check if project already exists for this user
+  // Check if project already exists
   const existingProject = await prisma.project.findFirst({
-    where: { 
-      name,
-      userId: req.user!.id
-    }
+    where: { name }
   });
 
   if (existingProject) {
@@ -419,7 +354,7 @@ router.post('/projects', [
     data: {
       name,
       description: description || null,
-      userId: req.user!.id,
+      userId: 'test-user', // Temporary for testing
     },
   });
 
@@ -430,7 +365,7 @@ router.post('/projects', [
 router.put('/projects/:id', [
   body('name').notEmpty().withMessage('Name is required'),
   body('description').optional().isString().withMessage('Description must be a string'),
-], requireUser, asyncHandler(async (req: AuthenticatedRequest, res) => {
+], asyncHandler(async (req, res) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
     throw createError('Validation failed', 400);
@@ -439,12 +374,9 @@ router.put('/projects/:id', [
   const { id } = req.params;
   const { name, description } = req.body;
 
-  // Check if project exists and belongs to user
+  // Check if project exists
   const existingProject = await prisma.project.findFirst({
-    where: { 
-      id,
-      userId: req.user!.id
-    }
+    where: { id }
   });
 
   if (!existingProject) {
@@ -463,44 +395,32 @@ router.put('/projects/:id', [
 }));
 
 // Delete project
-router.delete('/projects/:id', requireUser, asyncHandler(async (req: AuthenticatedRequest, res) => {
+router.delete('/projects/:id', asyncHandler(async (req, res) => {
   const { id } = req.params;
 
-  // Check if project exists and belongs to user
+  // Check if project exists
   const project = await prisma.project.findFirst({
-    where: { 
-      id,
-      userId: req.user!.id
-    }
+    where: { id }
   });
 
   if (!project) {
     throw createError('Project not found', 404);
   }
 
-  // Check if project is used by any chats
-  const chatCount = await prisma.chat.count({
-    where: { projectId: id }
-  });
-
-  if (chatCount > 0) {
-    throw createError('Cannot delete project that is used by chats', 400);
-  }
-
   await prisma.project.delete({
-    where: { id }
+    where: { id },
   });
 
-  res.json({ message: 'Project deleted successfully' });
+  res.status(204).send();
 }));
 
 // ===== PHASES =====
 
 // Get phases by project
-router.get('/phases', requireUser, asyncHandler(async (req: AuthenticatedRequest, res) => {
+router.get('/phases', asyncHandler(async (req, res) => {
   const { projectId } = req.query;
 
-  const where: any = { userId: req.user!.id };
+  const where: any = {};
   if (projectId) {
     where.projectId = projectId;
   }
@@ -520,7 +440,7 @@ router.post('/phases', [
   body('name').notEmpty().withMessage('Name is required'),
   body('projectId').notEmpty().withMessage('Project ID is required'),
   body('description').optional().isString().withMessage('Description must be a string'),
-], requireUser, asyncHandler(async (req: AuthenticatedRequest, res) => {
+], asyncHandler(async (req, res) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
     throw createError('Validation failed', 400);
@@ -528,25 +448,18 @@ router.post('/phases', [
 
   const { name, projectId, description } = req.body;
 
-  // Check if project exists and belongs to user
+  // Check if project exists
   const project = await prisma.project.findFirst({
-    where: { 
-      id: projectId,
-      userId: req.user!.id
-    }
+    where: { id: projectId }
   });
 
   if (!project) {
     throw createError('Project not found', 404);
   }
 
-  // Check if phase already exists for this project
+  // Check if phase already exists
   const existingPhase = await prisma.phase.findFirst({
-    where: { 
-      name,
-      projectId,
-      userId: req.user!.id
-    }
+    where: { name, projectId }
   });
 
   if (existingPhase) {
@@ -558,7 +471,7 @@ router.post('/phases', [
       name,
       description: description || null,
       projectId,
-      userId: req.user!.id,
+      userId: 'test-user', // Temporary for testing
     },
     include: {
       project: { select: { id: true, name: true } }
@@ -572,7 +485,7 @@ router.post('/phases', [
 router.put('/phases/:id', [
   body('name').notEmpty().withMessage('Name is required'),
   body('description').optional().isString().withMessage('Description must be a string'),
-], requireUser, asyncHandler(async (req: AuthenticatedRequest, res) => {
+], asyncHandler(async (req, res) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
     throw createError('Validation failed', 400);
@@ -581,12 +494,9 @@ router.put('/phases/:id', [
   const { id } = req.params;
   const { name, description } = req.body;
 
-  // Check if phase exists and belongs to user
+  // Check if phase exists
   const existingPhase = await prisma.phase.findFirst({
-    where: { 
-      id,
-      userId: req.user!.id
-    }
+    where: { id }
   });
 
   if (!existingPhase) {
@@ -608,43 +518,30 @@ router.put('/phases/:id', [
 }));
 
 // Delete phase
-router.delete('/phases/:id', requireUser, asyncHandler(async (req: AuthenticatedRequest, res) => {
+router.delete('/phases/:id', asyncHandler(async (req, res) => {
   const { id } = req.params;
 
-  // Check if phase exists and belongs to user
+  // Check if phase exists
   const phase = await prisma.phase.findFirst({
-    where: { 
-      id,
-      userId: req.user!.id
-    }
+    where: { id }
   });
 
   if (!phase) {
     throw createError('Phase not found', 404);
   }
 
-  // Check if phase is used by any chats
-  const chatCount = await prisma.chat.count({
-    where: { phaseId: id }
-  });
-
-  if (chatCount > 0) {
-    throw createError('Cannot delete phase that is used by chats', 400);
-  }
-
   await prisma.phase.delete({
-    where: { id }
+    where: { id },
   });
 
-  res.json({ message: 'Phase deleted successfully' });
+  res.status(204).send();
 }));
 
 // ===== FILE FORMATS =====
 
 // Get all file formats
-router.get('/formats', requireUser, asyncHandler(async (req: AuthenticatedRequest, res) => {
+router.get('/formats', asyncHandler(async (req, res) => {
   const formats = await prisma.fileFormat.findMany({
-    where: { userId: req.user!.id },
     orderBy: { name: 'asc' },
   });
   res.json(formats);
@@ -654,7 +551,7 @@ router.get('/formats', requireUser, asyncHandler(async (req: AuthenticatedReques
 router.post('/formats', [
   body('name').notEmpty().withMessage('Name is required'),
   body('description').optional().isString().withMessage('Description must be a string'),
-], requireUser, asyncHandler(async (req: AuthenticatedRequest, res) => {
+], asyncHandler(async (req, res) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
     throw createError('Validation failed', 400);
@@ -662,12 +559,9 @@ router.post('/formats', [
 
   const { name, description } = req.body;
 
-  // Check if format already exists for this user
+  // Check if format already exists
   const existingFormat = await prisma.fileFormat.findFirst({
-    where: { 
-      name,
-      userId: req.user!.id
-    }
+    where: { name }
   });
 
   if (existingFormat) {
@@ -678,7 +572,7 @@ router.post('/formats', [
     data: {
       name,
       description: description || null,
-      userId: req.user!.id,
+      userId: 'test-user', // Temporary for testing
     },
   });
 
@@ -689,7 +583,7 @@ router.post('/formats', [
 router.put('/formats/:id', [
   body('name').notEmpty().withMessage('Name is required'),
   body('description').optional().isString().withMessage('Description must be a string'),
-], requireUser, asyncHandler(async (req: AuthenticatedRequest, res) => {
+], asyncHandler(async (req, res) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
     throw createError('Validation failed', 400);
@@ -698,12 +592,9 @@ router.put('/formats/:id', [
   const { id } = req.params;
   const { name, description } = req.body;
 
-  // Check if format exists and belongs to user
+  // Check if format exists
   const existingFormat = await prisma.fileFormat.findFirst({
-    where: { 
-      id,
-      userId: req.user!.id
-    }
+    where: { id }
   });
 
   if (!existingFormat) {
@@ -722,35 +613,23 @@ router.put('/formats/:id', [
 }));
 
 // Delete file format
-router.delete('/formats/:id', requireUser, asyncHandler(async (req: AuthenticatedRequest, res) => {
+router.delete('/formats/:id', asyncHandler(async (req, res) => {
   const { id } = req.params;
 
-  // Check if format exists and belongs to user
+  // Check if format exists
   const format = await prisma.fileFormat.findFirst({
-    where: { 
-      id,
-      userId: req.user!.id
-    }
+    where: { id }
   });
 
   if (!format) {
     throw createError('File format not found', 404);
   }
 
-  // Check if format is used by any chats
-  const chatCount = await prisma.chat.count({
-    where: { formatId: id }
-  });
-
-  if (chatCount > 0) {
-    throw createError('Cannot delete file format that is used by chats', 400);
-  }
-
   await prisma.fileFormat.delete({
-    where: { id }
+    where: { id },
   });
 
-  res.json({ message: 'File format deleted successfully' });
+  res.status(204).send();
 }));
 
 export default router; 
