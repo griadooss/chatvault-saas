@@ -11,7 +11,6 @@ import subscriptionRoutes from './routes/subscriptions';
 
 // Import middleware
 import { errorHandler } from './middleware/errorHandler';
-import { authenticateToken } from './middleware/auth';
 
 // Load environment variables
 dotenv.config();
