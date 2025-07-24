@@ -1,4 +1,4 @@
-// Temporarily disabled Clerk middleware for testing
+// Temporarily disabled for build testing
 // import { authMiddleware } from "@clerk/nextjs";
  
 // This example protects all routes including api/trpc routes
